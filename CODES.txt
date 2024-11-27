@@ -1,0 +1,217 @@
+ 
+ENTRY PROGRAM FOR THE GOODS RECIEVED
+
+H OPTION(*NODEBUGIO)                                                     
+ FGDSRCVDD  CF   E             WORKSTN                                    
+  *                                                                       
+ C/EXEC SQL                                                               
+ C+ SET OPTION COMMIT = *NONE                                             
+ C/END-EXEC                                                               
+  *                                                                       
+ C                   DOW       (*IN03 = *OFF) AND (*IN12 = *OFF)          
+  *                                                                       
+ C                   EXFMT     GDS                                        
+ C                   IF        *IN01=*ON                                  
+ C                   EXFMT     NEWWIN                                     
+ C                   IF        *IN06 = *ON                                
+ C/EXEC SQL                                                               
+ C+ INSERT INTO TEN05LIB/GOODSRCVD                                        
+ C+ VALUES (:GDSRCV,:ITEMCODE,:USERR,:DATE,:TIME,:RQSTNO,:QTYRCVDD,:PRICE)
+ C/END-EXEC                                                               
+ C                   IF        %ERROR                                     
+ C     'ERROR FOUND 'DSPLY                                                
+ C                   LEAVE                          
+ C                   ELSE                           
+ C     'INSERTED'    DSPLY                          
+ C                   ENDIF                          
+ C                   EVAL      *IN06 = *OFF         
+ C                   ENDIF                          
+ C                   ENDDO                          
+  *                                                 
+ C                   EVAL      *INLR = *ON        
+
+
+
+-------------------------------------------------------------------------------------
+
+CODE TO SHOW DATA IN GIVEN PERIOD OF DATE
+
+
+H DEBUG(*YES) OPTION(*NODEBUGIO:*SRCSTMT)                                
+FGDSRCDF   CF   E             WORKSTN                                    
+FSUBFILE1  CF   E             WORKSTN SFILE(SUBF:RRN#) INFDS(FILDS)      
+ *                                                                       
+DRRN#             S              4S 0                                    
+DFILDS            DS                                                     
+DRECNO                  378    379I 0                                    
+ *                                                                       
+C/EXEC SQL                                                               
+C+ SET OPTION CLOSQLCSR = *ENDMOD,                                       
+C+            COMMIT    = *NONE                                          
+C/END-EXEC                                                               
+ *                                                                       
+C                   DOW       (*IN03 = *OFF) AND (*IN12 = *OFF)          
+C                   EXSR      DSPSR                                      
+C                   ENDDO                                                
+ *                                                                       
+C/EXEC SQL                                                               
+C+ CLOSE C1       
+C/END-EXEC                                                         
+ *                                                                 
+C                   EVAL      *INLR = *ON                          
+ *                                                                 
+C     *INZSR        BEGSR                                          
+C                   EVAL      *IN40 = *OFF                         
+C                   EVAL      *IN41 =*OFF                          
+C                   EVAL      *IN42 =*OFF                          
+C                   EVAL      *IN43 =*OFF                          
+C                   EVAL      RRN# = 0                             
+C                   EVAL      SRECNO = 1                           
+C                   EXFMT     GDDF                                 
+C/EXEC SQL                                                         
+C+ DECLARE C1 CURSOR FOR                                           
+C+   SELECT ITCODE,EMPY,RQSTNO,QNTYRCVD,PRC FROM GOODSRCVD         
+C+   WHERE DATE BETWEEN :DATE1 AND :DATE2                          
+C/END-EXEC                                                         
+ *                                                                 
+C/EXEC SQL                                                         
+C+ OPEN C1                                                         
+C/END-EXEC                                                          
+ *                                                                  
+C                   EXSR      CLEARSR                               
+C                   EXSR      LOADSR                                
+ *                                                                  
+C                   ENDSR                                           
+ *                                                                  
+C     CLEARSR       BEGSR                                           
+C                   EVAL      RRN# = 0                              
+C                   EVAL      *IN42 = *ON                           
+C                   WRITE     SFLTL                                 
+C                   EVAL      *IN42 = *OFF                          
+C                   ENDSR                                           
+ *                                                                  
+C     LOADSR        BEGSR                                           
+C                   EVAL      *IN43 = *OFF                          
+C/EXEC SQL                                                          
+C+ FETCH FROM C1 INTO :ITC, :EMP, :RQST, :QNTYRC, :PRCE             
+C/END-EXEC                                                          
+C                   DOW       SQLCOD = *ZEROS              
+C                   EVAL      RRN# = RRN# + 1              
+C                   IF        RRN# > 9999                  
+C                   LEAVE                                  
+C                   ENDIF                                  
+C                   WRITE     SUBF                         
+ *                                                         
+C/EXEC SQL                                                 
+C+ FETCH FROM C1 INTO :ITC, :EMP, :RQST, :QNTYRC, :PRCE    
+C/END-EXEC                                                 
+C                   ENDDO                                  
+C                   EVAL      *IN43 = *ON                  
+C                   ENDSR                                  
+ *                                                         
+C     DSPSR         BEGSR                                  
+C                   EVAL      *IN40 = *ON                  
+C                   EVAL      *IN41 = *ON                  
+C                   IF        RRN# < 0                     
+C                   EVAL      *IN40 = *OFF                 
+C                   ENDIF                                  
+C                   WRITE     FOOTER          
+C                   EXFMT     SFLTL           
+C                   EVAL      SRECNO = RECNO  
+C                   EVAL      *IN40 = *OFF    
+C                   EVAL      *IN41 = *OFF    
+C                   ENDSR                                                                            
+ 
+
+
+------------------------------------------------------------------
+
+TO TAKE DATE AS INPUT
+
+
+H OPTION(*NODEBUGIO)                                             
+FGDSRCDF   CF   E             WORKSTN                            
+ *                                                               
+DWDATE            S               D                              
+DEDATE            S               D                              
+C/EXEC SQL                                                       
+C+ SELECT :FDATE , :TDATE                                        
+C+ INTO :WDATE, :EDATE                                           
+C/EXEC SQL                                                       
+C+ SET OPTION COMMIT = *NONE                                     
+C/END-EXEC                                                       
+ *                                                               
+C                   DOW       (*IN03 = *OFF) AND (*IN12 = *OFF)  
+ *                                                               
+C                   EXFMT     GDDF                               
+C                   IF        *IN08 = *ON                        
+C                   CALL      'LOADALLL1'                        
+C                   EVAL      *IN08 = *OFF                       
+C                   ENDIF                                        
+
+C                   ENDDO                              
+ *                                                     
+C                   EVAL      *INLR = *ON          
+
+
+
+-------------------------------------------------------------------
+
+SECOND PRINTER FILE
+
+
+ H OPTION(*NODEBUGIO)                                                      
+ FPRINT2    O    E             PRINTER                                     
+ FDATEE     CF   E             WORKSTN                                     
+ C/EXEC SQL                                                                
+ C+ SET OPTION CLOSQLCSR = *ENDMOD,                                        
+ C+            COMMIT    = *NONE                                           
+ C/END-EXEC                                                                
+ C                   EXFMT     DAT                                         
+  *                                                                        
+ C/EXEC SQL                                                                
+ C+ DECLARE C1 SCROLL CURSOR FOR SELECT ITCODE, EMPY, DATE, QNTYRCVD,      
+ C+ PRC FROM TEN05LIB/GOODSRCVD WHERE DATE BETWEEN :DDATEF AND :DDATET     
+ C/END-EXEC                                                                
+  *                                                                        
+ C/EXEC SQL                                                                
+ C+ OPEN C1                                                                
+ C/END-EXEC                                                                
+  *                                                                        
+ C                   WRITE     RCD001                                      
+C                   WRITE     RCD003                             
+C                   DOW       (SQLCODE = 0)                      
+C*                                                               
+C/EXEC SQL                                                       
+C+ FETCH FROM C1 INTO :ITCODE, :EMPY, :DATE, :QNTYRCVD, :PRC     
+C/END-EXEC                                                       
+C                   IF        SQLCOD <> 0                        
+C                   LEAVE                                        
+C                   ENDIF                                        
+C                   WRITE     RCD005                             
+C                   ENDDO                                        
+ *                                                               
+C/EXEC SQL                                                       
+C+ CLOSE C1                                                      
+C/END-EXEC                                                       
+ *                                                               
+C                   EVAL      *INLR = *ON                        
+
+------------------------------------------------------------------------------------
+
+
+TO GO TO LOGIN FILE
+
+
+
+
+
+ PGM                         
+     GO TEN05LIB/LOGINFILE   
+ ENDPGM                      
+
+
+
+
+
+     
